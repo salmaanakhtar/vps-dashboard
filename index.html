@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>salmaan.dev — VPS overview</title>
+<style>
+  :root {
+    --bg: #0b0e14; --card: #12161f; --card2: #171c28; --line: #232a3a;
+    --fg: #dbe4f3; --dim: #8b94a7; --accent: #22d3ee; --green: #34d399;
+    --yellow: #fbbf24; --red: #f87171; --mono: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding: 24px; }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  header h1 { font-size: 20px; font-weight: 650; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  .badge { font: 11px/1 var(--mono); padding: 5px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--dim); background: var(--card); }
+  .badge.tailnet { color: var(--green); border-color: #14532d; background: #0d1f17; }
+  .badge.warn { color: var(--yellow); border-color: #4d3a10; background: #1d1708; }
+  .badge.err { color: var(--red); border-color: #5c1f1f; background: #200f0f; }
+  .spacer { flex: 1; }
+  #clock { font: 12px var(--mono); color: var(--dim); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .card h3 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--dim); margin-bottom: 8px; }
+  .card .big { font: 600 22px var(--mono); }
+  .card .sub { font: 12px var(--mono); color: var(--dim); margin-top: 4px; }
+  .bar { height: 6px; border-radius: 4px; background: var(--card2); margin-top: 9px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--accent), #818cf8); transition: width .4s; }
+  .bar.warn > i { background: linear-gradient(90deg, var(--yellow), #f97316); }
+  .bar.crit > i { background: linear-gradient(90deg, var(--red), #fb7185); }
+  svg.spark { display: block; margin-top: 8px; width: 100%; height: 28px; }
+  svg.spark polyline { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+
+  .grid2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .7px; color: var(--dim); padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td { padding: 8px 10px; border-bottom: 1px solid #1a2130; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  td.mono { font: 12px var(--mono); }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+  .dot.up { background: var(--green); box-shadow: 0 0 6px #34d39988; }
+  .dot.down { background: var(--red); box-shadow: 0 0 6px #f8717188; }
+  .dot.mid { background: var(--yellow); box-shadow: 0 0 6px #fbbf2488; }
+  .cellbar { background: var(--card2); border-radius: 3px; height: 5px; width: 90px; overflow: hidden; display: inline-block; vertical-align: middle; }
+  .cellbar > i { display: block; height: 100%; background: var(--accent); }
+  .tiny { font: 11px var(--mono); color: var(--dim); }
+  .imgcell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
+
+  .link-card { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, #101a24, #141024); border: 1px solid #244058; border-radius: 12px; padding: 16px 18px; text-decoration: none; color: var(--fg); }
+  .link-card:hover { border-color: var(--accent); }
+  .link-card .ic { font-size: 26px; }
+  .link-card .t { font-weight: 650; font-size: 15px; }
+  .link-card .s { color: var(--dim); font-size: 12.5px; margin-top: 2px; }
+  .link-card .arrow { margin-left: auto; color: var(--accent); font-size: 20px; }
+
+  footer { margin-top: 16px; display: flex; gap: 14px; flex-wrap: wrap; color: var(--dim); font: 11.5px var(--mono); }
+  .sect { margin-bottom: 10px; }
+  .sect h2 { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--dim); margin-bottom: 4px; }
+  .muted { color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>salmaan<span>.dev</span> — VPS overview</h1>
+    <span class="badge tailnet" id="b-net">tailnet only</span>
+    <span class="badge" id="b-host">—</span>
+    <span class="badge" id="b-docker">docker —</span>
+    <span class="spacer"></span>
+    <span id="clock">—</span>
+  </header>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Containers</h3>
+      <table id="ctable"><tbody><tr><td class="muted" colspan="6">loading…</td></tr></tbody></table>
+    </div>
+    <div class="card">
+      <h3>Docker storage</h3>
+      <div id="storage"><p class="muted">loading…</p></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Top processes</h3>
+      <table id="ptable"><tbody><tr><td class="muted" colspan="5">loading…</td></tr></tbody></table>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:10px">
+      <a class="link-card" href="https://grafana.salmaan.dev" target="_blank" rel="noopener">
+        <span class="ic">📈</span>
+        <span><span class="t">Grafana</span><br><span class="s">detailed time-series reporting — Prometheus backend</span></span>
+        <span class="arrow">↗</span>
+      </a>
+      <a class="link-card" href="https://trading.salmaan.dev" target="_blank" rel="noopener">
+        <span class="ic">🤖</span>
+        <span><span class="t">trading.salmaan.dev</span><br><span class="s">agentic trading app</span></span>
+        <span class="arrow">↗</span>
+      </a>
+    </div>
+  </div>
+
+  <footer>
+    <span id="f-status">status: connecting…</span>
+    <span id="f-updated">updated: —</span>
+    <span>refresh: 5 s</span>
+    <span>access: Tailscale CGNAT only (100.64.0.0/10)</span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const fmtBytes = n => { if (n == null) return "—"; const u = ["B","KiB","MiB","GiB","TiB"]; let i = 0; while (n >= 1024 && i < u.length-1) { n /= 1024; i++; } return n.toFixed(n >= 100 ? 0 : 1) + " " + u[i]; };
+const pct = (u, t) => t ? (u / t * 100).toFixed(1) : "0.0";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
+const barClass = p => p >= 90 ? "crit" : p >= 70 ? "warn" : "";
+let loadHist = [];
+
+function spark(values) {
+  if (!values.length) return "";
+  const W = 260, H = 28, mx = Math.max(...values, 0.01);
+  const pts = values.map((v, i) => `${(i/(values.length-1))*W},${H - (v/mx)*(H-3) - 1}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polyline points="${pts}"/></svg>`;
+}
+
+function renderHost(h) {
+  $("#b-host").textContent = h.hostname || "—";
+  $("#b-docker").textContent = "docker " + (h.docker_version || "—");
+  const memP = pct(h.mem.used, h.mem.total);
+  const swP = pct(h.mem.swap_used, h.mem.swap_total);
+  const dkP = pct(h.disk.used, h.disk.total);
+  loadHist.push(h.load[0]); if (loadHist.length > 40) loadHist.shift();
+  $("#cards").innerHTML = `
+    <div class="card">
+      <h3>Load average</h3>
+      <div class="big">${h.load.map(x => x.toFixed(2)).join(" / ")}</div>
+      <div class="sub">${h.cpu_count} vCPU · ${spark(loadHist)}</div>
+    </div>
+    <div class="card">
+      <h3>Memory</h3>
+      <div class="big">${fmtBytes(h.mem.used)}</div>
+      <div class="sub">of ${fmtBytes(h.mem.total)} · ${memP}% used · ${fmtBytes(h.mem.available)} avail</div>
+      <div class="bar ${barClass(+memP)}"><i style="width:${memP}%"></i></div>
+    </div>
+    <div class="card">
+      <h3>Swap</h3>
+      <div class="big">${fmtBytes(h.mem.swap_used)}</div>
+      <div class="sub">of ${fmtBytes(h.mem.swap_total)} · ${swP}% used</div>
+      <div class="bar ${barClass(+swP)}"><i style="width:${swP}%"></i></div>
+    </div>
+    <div class="card">
+      <h3>Disk</h3>
+      <div class="big">${fmtBytes(h.disk.used)}</div>
+      <div class="sub">of ${fmtBytes(h.disk.total)} · ${dkP}% used · ${fmtBytes(h.disk.free)} free</div>
+      <div class="bar ${barClass(+dkP)}"><i style="width:${dkP}%"></i></div>
+    </div>
+    <div class="card">
+      <h3>Uptime</h3>
+      <div class="big" id="upt">${fmtUptime(h.uptime)}</div>
+      <div class="sub">${h.os || ""} · ${h.kernel || ""}</div>
+    </div>`;
+}
+
+function fmtUptime(s) {
+  s = Math.floor(s || 0);
+  const d = Math.floor(s/86400), hh = Math.floor(s%86400/3600), mm = Math.floor(s%3600/60);
+  return (d ? d + "d " : "") + hh + "h " + mm + "m";
+}
+
+function renderContainers(containers, stats) {
+  const tbody = $("#ctable tbody");
+  if (!containers.length) { tbody.innerHTML = `<tr><td class="muted">no containers</td></tr>`; return; }
+  tbody.innerHTML = containers.map(c => {
+    const s = stats[c.name] || {};
+    const up = c.state === "running";
+    const dot = up ? "up" : (c.state === "exited" ? "down" : "mid");
+    const mp = s.mem_limit ? pct(s.mem_usage, s.mem_limit) : "—";
+    return `<tr>
+      <td class="mono"><span class="dot ${dot}"></span>${esc(c.name)}</td>
+      <td class="imgcell mono" title="${esc(c.image)}">${esc(c.image)}</td>
+      <td class="mono ${up ? "" : "muted"}">${esc(c.status)}</td>
+      <td class="mono">${s.cpu != null ? s.cpu.toFixed(1) + "%" : "—"}</td>
+      <td class="mono">${s.mem_usage != null ? fmtBytes(s.mem_usage) + " <span class='cellbar'><i style='width:${mp}%'></i></span> " + mp + "%" : "—"}</td>
+      <td class="mono tiny">${s.net_rx != null ? "↓" + fmtBytes(s.net_rx) + " ↑" + fmtBytes(s.net_tx) : ""}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderStorage(d) {
+  if (!d || d.error) { $("#storage").innerHTML = `<p class="muted">unavailable</p>`; return; }
+  const row = (label, o) => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1a2130"><span class="muted">${label}</span><span class="mono">${o.total} · ${o.active} active · ${fmtBytes(o.size)}${o.reclaimable ? ` <span class="muted">(${fmtBytes(o.reclaimable)} reclaim)</span>` : ""}</span></div>`;
+  $("#storage").innerHTML = `
+    ${row("Images", d.images)}${row("Containers", d.containers)}${row("Volumes", d.volumes)}${row("Build cache", d.build_cache)}
+    <div style="padding-top:7px;font:11px var(--mono);color:var(--dim)">Docker engine storage on host</div>`;
+}
+
+function renderProcs(procs) {
+  const tbody = $("#ptable tbody");
+  if (!procs || !procs.length) { tbody.innerHTML = `<tr><td class="muted" colspan="5">no data</td></tr>`; return; }
+  tbody.innerHTML = `<tr><th>pid</th><th>cpu%</th><th>rss</th><th>user</th><th>command</th></tr>` + procs.map(p =>
+    `<tr><td class="mono">${p.pid}</td><td class="mono">${p.cpu.toFixed(1)}</td><td class="mono">${fmtBytes(p.rss * 1024)}</td><td class="mono tiny">${esc(p.user)}</td><td class="mono" style="color:var(--dim)">${esc(p.comm)}</td></tr>`
+  ).join("");
+}
+
+let lastOk = null;
+let hostUptimeAt = 0;
+async function poll() {
+  try {
+    const [h, c, s, d] = await Promise.all([
+      fetch("/api/host").then(r => r.json()),
+      fetch("/api/containers").then(r => r.json()),
+      fetch("/api/stats").then(r => r.json()),
+      fetch("/api/system").then(r => r.json()),
+    ]);
+    if (!h.error) { hostUptimeAt = h.uptime; renderHost(h); }
+    renderContainers(c.error ? [] : c, s.error ? {} : s);
+    renderStorage(d);
+    renderProcs(h.top_procs);
+    lastOk = new Date();
+    $("#f-status").textContent = "status: live";
+    $("#f-status").style.color = "var(--green)";
+    $("#b-net").textContent = "tailnet only";
+  } catch (e) {
+    $("#f-status").textContent = "status: agent unreachable";
+    $("#f-status").style.color = "var(--red)";
+  }
+  $("#f-updated").textContent = "updated: " + (lastOk ? lastOk.toLocaleTimeString() : "—");
+}
+
+setInterval(() => {
+  const el = $("#clock"); el.textContent = new Date().toLocaleString();
+  if (lastOk) $("#upt").textContent = fmtUptime(hostUptimeAt + (Date.now() - lastOk.getTime()) / 1000);
+}, 1000);
+
+poll();
+setInterval(poll, 5000);
+</script>
+</body>
+</html>
