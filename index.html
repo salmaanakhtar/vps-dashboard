@@ -90,6 +90,13 @@
     </div>
   </div>
 
+  <div class="card" style="margin-bottom:12px">
+    <h3>Traffic — requests through the edge</h3>
+    <div id="traffic-sum"><p class="muted">loading…</p></div>
+    <table id="ttable"><tbody><tr><td class="muted" colspan="8">loading…</td></tr></tbody></table>
+    <div class="tiny" style="margin-top:8px">(edge) = blocked at the edge (public scanners probing private apps) · (legacy) = history from before the bridge-IP shuffle · hermes-agent self-ping excluded from app totals</div>
+  </div>
+
   <div class="grid2">
     <div class="card">
       <h3>Top processes</h3>
@@ -212,19 +219,47 @@ function renderProcs(procs) {
   ).join("");
 }
 
+const fmtInt = n => (n ?? 0).toLocaleString("en-US");
+
+function renderTraffic(t) {
+  const sum = $("#traffic-sum");
+  if (!t || t.error || !t.ready) { sum.innerHTML = `<p class="muted">collecting…</p>`; return; }
+  const sp = (t.self_ping_excluded || []).map(a => `${esc(a.app)} ${fmtInt(a.hits)}`).join(" · ");
+  sum.innerHTML = `<span class="muted">${fmtInt(t.total_requests)} requests total</span> · window ${esc(t.window_start)} → ${esc(t.window_end)} · self-ping excluded ${sp ? "(" + esc(sp) + ")" : "—"}`;
+  const tbody = $("#ttable tbody");
+  const rows = [...t.apps].sort((a, b) => b.hits - a.hits);
+  tbody.innerHTML = `<tr><th>app</th><th>hits</th><th>today</th><th>1h</th><th>avg</th><th>p95</th><th>4xx/5xx</th><th>top path</th></tr>` + rows.map(a => {
+    const dim = /\((legacy|edge)\)/.test(a.app);
+    const errs = Object.entries(a.codes || {}).filter(([c]) => c >= "400").reduce((n, [, v]) => n + v, 0);
+    const top = (a.top_paths || [])[0];
+    return `<tr class="${dim ? "muted" : ""}">
+      <td class="mono">${esc(a.app)}</td>
+      <td class="mono">${fmtInt(a.hits)}</td>
+      <td class="mono">${fmtInt(a.today)}</td>
+      <td class="mono">${fmtInt(a.last_hour)}</td>
+      <td class="mono">${a.avg_ms != null ? a.avg_ms + "ms" : "—"}</td>
+      <td class="mono">${a.p95_ms != null ? a.p95_ms + "ms" : "—"}</td>
+      <td class="mono" ${errs ? 'style="color:var(--yellow);font-weight:600"' : ""}>${errs ? fmtInt(errs) : "—"}</td>
+      <td class="mono tiny">${top ? esc(top[0]) + " × " + fmtInt(top[1]) : "—"}</td>
+    </tr>`;
+  }).join("");
+}
+
 let lastOk = null;
 let hostUptimeAt = 0;
 async function poll() {
   try {
-    const [h, c, s, d] = await Promise.all([
+    const [h, c, s, d, t] = await Promise.all([
       fetch("/api/host").then(r => r.json()),
       fetch("/api/containers").then(r => r.json()),
       fetch("/api/stats").then(r => r.json()),
       fetch("/api/system").then(r => r.json()),
+      fetch("/api/traffic").then(r => r.json()),
     ]);
     if (!h.error) { hostUptimeAt = h.uptime; renderHost(h); }
     renderContainers(c.error ? [] : c, s.error ? {} : s);
     renderStorage(d);
+    renderTraffic(t);
     renderProcs(h.top_procs);
     lastOk = new Date();
     $("#f-status").textContent = "status: live";
